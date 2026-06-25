@@ -58,19 +58,40 @@ Evaluated on **JBB-Behaviors** — the official JailbreakBench benchmark
 live via `datasets.load_dataset("JailbreakBench/JBB-Behaviors")`, not
 hand-written.
 
-| Allocator | Recall | Precision | FPR | Avg. cost | vs. always-all |
+| Allocator | Recall | Precision | FPR | Avg. cost (assigned units) | Avg. latency (ms, measured) |
 |---|---|---|---|---|---|
-| Prompt Guard 2 only | 0.31 | 0.646 | 0.17 | 1.0 | — |
-| ShieldGemma 2B only | 0.96 | 0.744 | 0.33 | 8.0 | — |
-| WildGuard 7B only | 0.98 | 0.710 | 0.40 | 25.0 | — |
-| Claude (judge) only | 0.94 | 0.839 | 0.18 | 15.0 | — |
-| **Always-all** (run every arm) | 0.93 | **0.830** | 0.19 | 49.0 | baseline |
-| **Cascade** (this project) | **0.95** | 0.748 | 0.32 | **31.1** | **1.6× less compute** |
+| Prompt Guard 2 only | 0.31 | 0.646 | 0.17 | 1.0 | 81 |
+| ShieldGemma 2B only | 0.96 | 0.744 | 0.33 | 8.0 | 19 |
+| WildGuard 7B only | 0.98 | 0.710 | 0.40 | 25.0 | 457 |
+| Claude (judge) only | 0.94 | 0.839 | 0.18 | 15.0 | 1530 |
+| **Always-all** (run every arm) | 0.93 | **0.830** | 0.19 | 49.0 | 2593 |
+| **Cascade** (this project) | **0.95** | 0.748 | 0.32 | **31.1** | **911** |
 
-The cascade beats "run everything" on recall while using less compute — but
-its precision is meaningfully worse (0.748 vs. 0.830). This is a real
-tradeoff, reported honestly rather than cropped out — see
-[Findings](#findings) below for why.
+vs. always-all: **1.6× less compute** by assigned cost units, **2.8× less
+compute** by measured wall-clock latency.
+
+**On the "cost" column, stated plainly:** those numbers (1 / 8 / 25 / 15)
+are *hand-assigned* relative-size proxies set in `detectors.py`
+(`cost = 8.0  # roughly proportional to...`), not something we measured.
+They don't hold up — ShieldGemma (cost 8) is measurably *faster* than
+Prompt Guard (cost 1) in the real benchmark run (19ms vs 81ms), and Claude
+(cost 15) is the *slowest* arm by far (1530ms, slower than WildGuard's
+cost-25, 457ms), because its cost is API/network latency, not GPU compute.
+The recall/precision/FPR numbers are all measured against real model
+weights (`MOCK_MODE = False`); the cost column is not — it's a rough size
+proxy (86M / 2B / 7B / API) baked in before any real run, never
+reconciled against the latency numbers `benchmark.py` was already
+recording. The `avg_latency_ms` column above is the actual measured
+number, pulled straight from `results/results_table.csv`, and it tells a
+similar story (cascade saves compute) but a messier and more honest one —
+e.g. ShieldGemma's short Yes/No single-forward-pass scoring vs WildGuard's
+32-token autoregressive generation explains most of the latency spread,
+not parameter count alone.
+
+The cascade beats "run everything" on recall while using less compute (by
+either measure) — but its precision is meaningfully worse (0.748 vs.
+0.830). This is a real tradeoff, reported honestly rather than cropped
+out — see [Findings](#findings) below for why.
 
 ![Recall vs. compute cost](results/recall_vs_cost.png)
 

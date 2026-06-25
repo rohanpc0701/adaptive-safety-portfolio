@@ -145,7 +145,9 @@ class PromptGuardDetector(BaseDetector):
 # ---------------------------------------------------------------------------
 class ShieldGemmaDetector(BaseDetector):
     name = "shieldgemma_2b"
-    cost = 8.0  # roughly proportional to relative latency vs prompt guard (~58ms vs ~9ms)
+    cost = 8.0  # hand-assigned size proxy (86M vs 2B params), NOT measured latency —
+    # real benchmark run shows ShieldGemma is actually faster than Prompt Guard 2;
+    # see README "On the cost column" caveat
 
     def __init__(self):
         self._model = None
@@ -198,7 +200,8 @@ class ShieldGemmaDetector(BaseDetector):
 # ---------------------------------------------------------------------------
 class WildGuardDetector(BaseDetector):
     name = "wildguard_7b"
-    cost = 25.0  # 7B model, slowest local arm
+    cost = 25.0  # hand-assigned size proxy (7B params) — real measured latency is
+    # higher than this proxy suggests relative to Claude's API cost; see README
 
     def __init__(self):
         self._model = None
