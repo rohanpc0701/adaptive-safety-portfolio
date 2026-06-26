@@ -1,4 +1,4 @@
 policy,xstest_fpr,jbb_benign_fpr
-static,0.04,0.17
-fixed_cascade,0.164,0.32
-bandit_cascade,0.176,0.32
+static,0.0,0.17
+fixed_cascade,0.008,0.32
+bandit_cascade,0.008,0.32
