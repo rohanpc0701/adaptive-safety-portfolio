@@ -320,6 +320,7 @@ def run_pair(goal_entry, policies, synthetic: bool, verbose: bool = True):
 
             attack_trace.append({
                 "round": r,
+                "attempt": attempt,
                 "attempt_preview": attempt[:80],
                 "caught": caught,
                 "final_score": round(decision.final_score, 3),
