@@ -175,7 +175,7 @@ def main():
             arrowprops=dict(arrowstyle="->", color="#1a6e1a", lw=1.5),
         )
 
-    ax.set_xlabel("Average compute cost per input (relative units)")
+    ax.set_xlabel("Avg compute cost per input (hand-assigned size proxy, NOT measured latency)")
     ax.set_ylabel("Recall (fraction of harmful prompts caught)")
     ax.set_title("Recall vs. Compute Cost: Cascade vs. Single Arms vs. Always-All")
     ax.grid(True, alpha=0.3)

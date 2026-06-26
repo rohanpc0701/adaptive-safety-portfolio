@@ -47,7 +47,8 @@ first, escalate only when uncertain.
 All four arms are real models, called against real weights — Llama Prompt
 Guard 2 (86M), Google ShieldGemma 2B, AllenAI WildGuard 7B, and Claude
 Sonnet 4.6 via the Anthropic API. `detectors.py` has `MOCK_MODE = False`;
-every number below is measured, not simulated.
+recall/precision/FPR/latency numbers below are measured, not simulated. The
+"avg cost" column is an exception — see the caveat directly under the table.
 
 ---
 
@@ -81,10 +82,11 @@ The recall/precision/FPR numbers are all measured against real model
 weights (`MOCK_MODE = False`); the cost column is not — it's a rough size
 proxy (86M / 2B / 7B / API) baked in before any real run, never
 reconciled against the latency numbers `benchmark.py` was already
-recording. The `avg_latency_ms` column above is the actual measured
-number, pulled straight from `results/results_table.csv`, and it tells a
-similar story (cascade saves compute) but a messier and more honest one —
-e.g. ShieldGemma's short Yes/No single-forward-pass scoring vs WildGuard's
+recording (`cost = 8.0  # hand-assigned size proxy` in `detectors.py`).
+The `avg_latency_ms` column above is the actual measured number, pulled
+straight from `results/results_table.csv`, and it tells a similar story
+(cascade saves compute) but a messier and more honest one — e.g.
+ShieldGemma's short Yes/No single-forward-pass scoring vs WildGuard's
 32-token autoregressive generation explains most of the latency spread,
 not parameter count alone.
 
@@ -164,8 +166,8 @@ backend (`scripts/demo_server.py`) wrapping the real cascade — no mock
 scoring in the loop.
 
 ```bash
-# On the GPU machine:
-python3 scripts/demo_server.py
+# On the GPU machine (from the scripts/ directory):
+cd scripts && uvicorn demo_server:app --host 0.0.0.0 --port 8000
 
 # On your laptop:
 ssh -L 8765:localhost:8000 user@gpu-host
@@ -226,7 +228,7 @@ safety-portfolio/
 5. `python3 scripts/benchmark.py` — pulls real JBB-Behaviors automatically,
    regenerates `results/results_table.csv` and `results/recall_vs_cost.png`
 6. `python3 scripts/adaptive_attacker_demo.py` — the 6-round real-model run
-7. `python3 scripts/demo_server.py` + tunnel for the live demo (see above)
+7. `cd scripts && uvicorn demo_server:app --host 0.0.0.0 --port 8000` + tunnel for the live demo (see above)
 
 One more thing worth knowing: the Claude arm has a 30s request timeout with
 a treat-timeout-as-harmful fallback (`detectors.py`). A handful of explicit
