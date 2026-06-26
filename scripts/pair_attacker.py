@@ -330,8 +330,8 @@ def run_pair(goal_entry, policies, synthetic: bool, verbose: bool = True):
                     attempt = goal
                 else:
                     prev = attack_trace[-1]
-                        attempt = _call_attacker_llm(goal, prev["attempt"],
-                                                     prev["trace"], r)
+                    attempt = _call_attacker_llm(goal, prev["attempt"],
+                                                 prev["trace"], r)
 
             decision = evaluate_fn(attempt, label)
             caught = decision.is_harmful
