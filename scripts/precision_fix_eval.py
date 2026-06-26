@@ -17,13 +17,15 @@ FIX:
   Claude's precision overrides the uncertain agreement.
 
 THIS SCRIPT:
-  Sweeps the low-confidence window width on synthetic data, showing the
-  precision/recall/cost tradeoff. Identifies the window that best improves
-  precision without sacrificing recall. Two key comparisons:
+  Sweeps the low-confidence window width. Default: real models (needs GPU +
+  ANTHROPIC_API_KEY). Pass --synthetic for fast calibrated run (~5s, no GPU).
+
+  Two key comparisons:
     1. Original cascade (no fix, window disabled) vs. fixed cascade
     2. Always-all (upper precision bound) vs. fixed cascade
 """
 
+import argparse
 import os
 import sys
 import numpy as np
@@ -33,7 +35,7 @@ import matplotlib.pyplot as plt
 sys.path.insert(0, os.path.dirname(__file__))
 
 from cascade import CascadeAllocator, CascadeDecision
-from bandit_benchmark import build_synthetic_detectors, _run_cascade_synthetic
+from bandit_benchmark import build_synthetic_detectors, build_real_detectors, _run_cascade_synthetic
 from load_data import get_benchmark_data
 
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "results")
@@ -45,15 +47,20 @@ REAL_BASELINE = {
 }
 
 
+def _score(detector, prompt, label):
+    """Unified call — synthetic detectors need label, real detectors don't."""
+    if hasattr(detector, 'score_with_label'):
+        return detector.score_with_label(prompt, label)
+    return detector.score(prompt)
+
+
 def run_cascade_with_low_conf(pg, sg, wg, cj, prompts, labels,
                                low_conf_low, low_conf_high,
                                confident_high=0.75, disagreement_threshold=0.35,
                                decision_threshold=0.5):
-    always_all_cost = pg.cost + sg.cost + wg.cost + cj.cost
     decisions = []
     for prompt, label in zip(prompts, labels):
-        # Run stage 1
-        pg_r = pg.score_with_label(prompt, label)
+        pg_r = _score(pg, prompt, label)
         arms_called = [pg.name]
         total_cost = pg_r.cost
         total_latency = pg_r.latency_ms
@@ -66,9 +73,8 @@ def run_cascade_with_low_conf(pg, sg, wg, cj, prompts, labels,
                 total_latency_ms=total_latency, trace=trace))
             continue
 
-        # Stage 2
-        sg_r = sg.score_with_label(prompt, label)
-        wg_r = wg.score_with_label(prompt, label)
+        sg_r = _score(sg, prompt, label)
+        wg_r = _score(wg, prompt, label)
         arms_called.extend([sg.name, wg.name])
         total_cost += sg_r.cost + wg_r.cost
         total_latency += sg_r.latency_ms + wg_r.latency_ms
@@ -87,8 +93,7 @@ def run_cascade_with_low_conf(pg, sg, wg, cj, prompts, labels,
                 total_latency_ms=total_latency, trace=trace))
             continue
 
-        # Stage 3
-        cj_r = cj.score_with_label(prompt, label)
+        cj_r = _score(cj, prompt, label)
         arms_called.append(cj.name)
         total_cost += cj_r.cost
         total_latency += cj_r.latency_ms
@@ -124,12 +129,23 @@ def metrics(decisions, labels):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--synthetic", action="store_true",
+                        help="Use calibrated synthetic detectors (no GPU, ~5s)")
+    args = parser.parse_args()
+
     print("Loading data...")
     prompts, labels = get_benchmark_data(seed=42)
     print(f"  {len(prompts)} prompts")
 
-    print("Building synthetic detectors...")
-    pg, sg, wg, cj = build_synthetic_detectors()
+    if args.synthetic:
+        print("Building synthetic detectors...")
+        pg, sg, wg, cj = build_synthetic_detectors()
+        mode_label = "synthetic calibrated"
+    else:
+        print("REAL MODEL MODE — needs GPU + ANTHROPIC_API_KEY.")
+        pg, sg, wg, cj = build_real_detectors()
+        mode_label = "real models"
 
     # Sweep low_conf window widths (symmetric around 0.5)
     # Width 0.0 = original cascade (no fix), 0.6 = widest window [0.2, 0.8]
@@ -213,8 +229,8 @@ def main():
     ax3.legend(fontsize=8)
     ax3.grid(alpha=0.3)
 
-    fig.suptitle("Low-Confidence Escalation Fix: Precision/Recall/Cost Tradeoff\n"
-                 "(synthetic calibrated scores — real-model numbers will differ)",
+    fig.suptitle(f"Low-Confidence Escalation Fix: Precision/Recall/Cost Tradeoff\n"
+                 f"({mode_label})",
                  fontsize=12, fontweight="bold")
     plt.tight_layout()
     png_path = os.path.join(RESULTS_DIR, "precision_fix_sweep.png")
