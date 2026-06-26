@@ -193,7 +193,9 @@ Decision shape: `trace[]` (per-arm `{name, score}`), `final_score`,
 safety-portfolio/
   scripts/
     detectors.py                  all 4 detector arms, real model calls (MOCK_MODE = False)
-    cascade.py                     the cascade allocator + baseline allocators (always-all, single-arm)
+    cascade.py                     fixed-threshold cascade + baseline allocators (always-all, single-arm)
+    bandit_cascade.py              EXP3-adaptive cascade: learns escalation threshold online from streaming feedback
+    bandit_benchmark.py            online simulation: EXP3 bandit vs fixed cascade, produces learning curve plot
     load_data.py                    real JBB-Behaviors pull (hand-written toy set as network-failure fallback)
     benchmark.py                     runs all allocators, produces results table + chart
     adaptive_attacker_demo.py         6-round self-authored adaptive-attack sequence
@@ -238,12 +240,44 @@ timeout, a single such call can hang indefinitely.
 
 ---
 
+## EXP3 bandit allocator (online-adaptive)
+
+`scripts/bandit_cascade.py` implements `EXP3CascadeAllocator` — a drop-in
+replacement for `CascadeAllocator` that treats the stage-1 escalation
+threshold as a bandit arm and learns it online from streaming feedback, instead
+of fixing it statically.
+
+**Why EXP3 specifically:** jailbreak prompts aren't i.i.d. — attackers adapt.
+EXP3 assumes an *adversarial* reward sequence (no stationarity, no distribution
+assumption), making it theoretically appropriate where UCB (which assumes
+stochastic rewards) is not.
+
+**What the bandit learns:** after running PromptGuard 2, the cascade must
+decide to stop or escalate. Six discrete `confident_high` thresholds are
+arms: `[0.50, 0.60, 0.70, 0.75, 0.80, 0.90]`. Lower threshold = stop earlier
+= cheaper, more false negatives. Higher = escalate more = better recall, less
+savings. EXP3 importance-weight-updates the chosen arm after each true label.
+
+**Reward:** correct + saved compute → `0.5 + 0.5*(1 - cost_fraction)`;
+wrong decision → `0.0`. Balances recall and compute savings without manually
+setting a trade-off weight.
+
+**Run the online simulation:**
+```bash
+# Fast (calibrated synthetic scores, no GPU, ~5s):
+python3 scripts/bandit_benchmark.py --synthetic
+
+# Real models (needs GPU, ~hours):
+python3 scripts/bandit_benchmark.py
+```
+
+Output: `results/bandit_learning_curve.png` (rolling recall/precision/cost
++ EXP3 arm weight evolution) and `results/bandit_vs_fixed.csv`.
+
+---
+
 ## What's next
 
-- **Real online/bandit allocation** (LinUCB or EXP3) instead of fixed
-  thresholds, so the policy adapts per-input based on running performance —
-  directly motivated by Findings 1 and 2 above, not a hypothetical
-  nice-to-have.
 - **A real adaptive attacker** (PAIR-style iterative refinement, or a
   bandit over framing strategies) instead of the hand-crafted 6-round
   sequence, to see how many rounds a *search-driven* attacker needs to find
@@ -251,6 +285,10 @@ timeout, a single such call can hang indefinitely.
 - **Over-refusal measurement** (XSTest) — escalation and randomization both
   risk making benign-but-edgy prompts more likely to get flagged; not yet
   measured.
+- **Low-confidence escalation to Claude** — mid-tier arms agreeing with
+  low confidence (scores in [0.4, 0.6]) should escalate to Claude, not just
+  disagreement. This is the fix to the precision gap (0.748 vs 0.830) that
+  is already diagnosed but not yet built.
 
 ## Background and prior art
 
