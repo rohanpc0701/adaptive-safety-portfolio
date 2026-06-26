@@ -48,6 +48,8 @@ class CascadeAllocator:
         confident_high: float = 0.75,
         disagreement_threshold: float = 0.35,
         decision_threshold: float = 0.5,
+        low_conf_low: float = 0.35,
+        low_conf_high: float = 0.65,
     ):
         self.prompt_guard = prompt_guard
         self.shieldgemma = shieldgemma
@@ -64,6 +66,13 @@ class CascadeAllocator:
         self.confident_high = confident_high    # above this from the floor arm -> stop, call it harmful
         self.disagreement_threshold = disagreement_threshold  # how far apart mid-tier scores must be to escalate
         self.decision_threshold = decision_threshold  # final score -> binary decision
+        # Low-confidence window: mid-tier arms agree but average score falls in
+        # [low_conf_low, low_conf_high] -> escalate to Claude anyway.
+        # Fixes the precision gap: mid-tier arms agreeing on a false positive at
+        # low confidence go uncorrected without this; Claude's precision (0.839)
+        # overrides the uncertain agreement. Default window [0.35, 0.65].
+        self.low_conf_low = low_conf_low
+        self.low_conf_high = low_conf_high
 
     def evaluate(self, prompt: str) -> CascadeDecision:
         arms_called = []
@@ -109,8 +118,9 @@ class CascadeAllocator:
         mid_tier_avg = (sg_result.score + wg_result.score) / 2.0
         disagreement = abs(sg_result.score - wg_result.score)
 
-        if disagreement < self.disagreement_threshold:
-            # They agree, trust the average, stop here.
+        low_conf_uncertain = (self.low_conf_low <= mid_tier_avg <= self.low_conf_high)
+        if disagreement < self.disagreement_threshold and not low_conf_uncertain:
+            # They agree with confidence -> trust the average, stop here.
             final_score = mid_tier_avg
             return CascadeDecision(
                 final_score=final_score,
@@ -121,7 +131,8 @@ class CascadeAllocator:
                 trace=trace,
             )
 
-        # Stage 3: mid-tier arms disagree -> escalate to Claude as tiebreaker.
+        # Stage 3: mid-tier arms disagree OR agree with low confidence
+        # -> escalate to Claude as tiebreaker.
         cj_result = self.claude_judge.score(prompt)
         arms_called.append(self.claude_judge.name)
         total_cost += cj_result.cost

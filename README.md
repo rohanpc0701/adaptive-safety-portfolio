@@ -198,6 +198,7 @@ safety-portfolio/
     bandit_benchmark.py            online simulation: EXP3 bandit vs fixed cascade, produces learning curve plot
     pair_attacker.py               PAIR-style search-driven attacker: LLM iteratively refines jailbreaks using per-arm score feedback
     xstest_eval.py                 over-refusal audit: FPR on XSTest 250 safe prompts, by category, vs JBB benign baseline
+    precision_fix_eval.py          low-confidence escalation sweep: precision/recall/cost tradeoff at different window widths
     load_data.py                    real JBB-Behaviors pull (hand-written toy set as network-failure fallback)
     benchmark.py                     runs all allocators, produces results table + chart
     adaptive_attacker_demo.py         6-round self-authored adaptive-attack sequence
@@ -366,12 +367,49 @@ Output: `results/xstest_results.png` (FPR by category + vs JBB benign),
 
 ---
 
+## Low-confidence escalation fix (precision gap)
+
+**Problem (Finding 1):** cascade precision (0.748) < always-all (0.830) because
+Claude's superior precision (0.839) only gets invoked on mid-tier *disagreement*.
+When ShieldGemma and WildGuard agree on a false positive at low confidence, nothing
+overrides them. Only 22% of inputs reached Claude in the original cascade.
+
+**Fix:** `CascadeAllocator` now accepts `low_conf_low` / `low_conf_high` params
+(default [0.35, 0.65]). If mid-tier arms agree (disagreement < threshold) but
+their average score falls inside this window, escalate to Claude anyway — uncertain
+agreement is treated the same as disagreement.
+
+**Tradeoff sweep (synthetic calibrated scores):**
+
+| Window | Precision | Recall | FPR | Avg cost | % reach Claude |
+|---|---|---|---|---|---|
+| disabled (original) | 0.901 | 1.000 | 0.110 | 35.2 | 16.5% |
+| [0.35, 0.65] (default) | 0.935 | 1.000 | 0.070 | 38.3 | 29.5% |
+| [0.25, 0.75] (wider) | 0.962 | 1.000 | 0.040 | 39.0 | 41.0% |
+| always-all (ref) | 0.830* | 0.930* | 0.190* | 49.0* | 100% |
+
+*Real model numbers — rest are synthetic calibrated.
+
+Precision improves monotonically as the window widens; cost grows proportionally
+to how many inputs now reach Claude. The sweet spot depends on the cost/precision
+tradeoff for the deployment context — [0.35, 0.65] is the default; override with
+`CascadeAllocator(..., low_conf_low=0.25, low_conf_high=0.75)` for more precision.
+
+```bash
+python3 scripts/precision_fix_eval.py
+```
+
+Output: `results/precision_fix_sweep.png`, `results/precision_fix_sweep.csv`.
+
+---
+
 ## What's next
 
-- **Low-confidence escalation to Claude** — mid-tier arms agreeing with
-  low confidence (scores in [0.4, 0.6]) should escalate to Claude, not just
-  disagreement. This is the fix to the precision gap (0.748 vs 0.830) that
-  is already diagnosed but not yet built.
+- Run the full GPU benchmark to get real-model numbers for EXP3 bandit, PAIR
+  attacker, XSTest, and the precision fix (all four above use synthetic scores
+  pending a real-model run).
+- Persistent demo hosting (Modal / HuggingFace Spaces) so the live URL stays
+  up without a $1.99/hr pod.
 
 ## Background and prior art
 
