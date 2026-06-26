@@ -196,6 +196,7 @@ safety-portfolio/
     cascade.py                     fixed-threshold cascade + baseline allocators (always-all, single-arm)
     bandit_cascade.py              EXP3-adaptive cascade: learns escalation threshold online from streaming feedback
     bandit_benchmark.py            online simulation: EXP3 bandit vs fixed cascade, produces learning curve plot
+    pair_attacker.py               PAIR-style search-driven attacker: LLM iteratively refines jailbreaks using per-arm score feedback
     load_data.py                    real JBB-Behaviors pull (hand-written toy set as network-failure fallback)
     benchmark.py                     runs all allocators, produces results table + chart
     adaptive_attacker_demo.py         6-round self-authored adaptive-attack sequence
@@ -276,12 +277,52 @@ Output: `results/bandit_learning_curve.png` (rolling recall/precision/cost
 
 ---
 
+## PAIR adaptive attacker (`scripts/pair_attacker.py`)
+
+Replaces the hand-crafted 6-prompt attack sequence with a real search-driven
+attacker. Reference: Chao et al. 2023, "Jailbreaking Black Box Large Language
+Models in Twenty Queries."
+
+**Loop:** attacker LLM (Claude) sees the harmful goal + previous attempt +
+per-arm scores → generates a refined jailbreak → cascade re-evaluates.
+Feedback is richer than caught/not: the attacker sees *which arm caught it* and
+*at what score*, and is instructed to specifically target the highest-scoring
+arm's likely reasoning. Repeat up to 15 rounds or until `is_harmful=False`.
+
+**Runs against three policies simultaneously** for direct comparison:
+- Static (Prompt Guard 2 only)
+- Fixed-threshold cascade
+- EXP3 bandit cascade
+
+**Results (synthetic mode — real LLM attacker run on GPU replaces these):**
+
+| Policy | Escape rate | Notes |
+|---|---|---|
+| Static (PG2 only) | 5/5 (100%) | Escapes round 1 every goal — confirmed blind spot |
+| Fixed cascade | 0/5 (0%) | Held all 15 rounds across 5 diverse goals |
+| EXP3 bandit | 0/5 (0%) | Held all 15 rounds |
+
+The static result independently replicates Finding 2 from the JBB benchmark
+(PG2 misses harmful prompts with no obvious trigger phrases). The cascade
+result is an upper bound — a real LLM attacker with semantic understanding of
+the cascade's per-arm feedback will be harder to resist than pre-defined
+framing variants.
+
+```bash
+# Synthetic (pre-defined framing variants, no GPU, ~30s):
+python3 scripts/pair_attacker.py --synthetic --verbose
+
+# Real (LLM attacker + real models, needs GPU + ANTHROPIC_API_KEY):
+python3 scripts/pair_attacker.py
+```
+
+Output: `results/pair_attack_results.png`, `results/pair_attack_results.csv`,
+`results/pair_attack_trace.json`.
+
+---
+
 ## What's next
 
-- **A real adaptive attacker** (PAIR-style iterative refinement, or a
-  bandit over framing strategies) instead of the hand-crafted 6-round
-  sequence, to see how many rounds a *search-driven* attacker needs to find
-  the cascade's remaining blind spots.
 - **Over-refusal measurement** (XSTest) — escalation and randomization both
   risk making benign-but-edgy prompts more likely to get flagged; not yet
   measured.
