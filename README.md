@@ -397,33 +397,42 @@ Output: `results/xstest_results.png` (FPR by category + vs JBB benign),
 ## Low-confidence escalation fix (precision gap)
 
 **Problem (Finding 1):** cascade precision (0.748) < always-all (0.830) because
-Claude's superior precision (0.839) only gets invoked on mid-tier *disagreement*.
-When ShieldGemma and WildGuard agree on a false positive at low confidence, nothing
+Claude's superior precision (0.862) only gets invoked on mid-tier *disagreement*.
+When ShieldGemma and WildGuard agree on a false positive at high confidence, nothing
 overrides them. Only 22% of inputs reached Claude in the original cascade.
 
-**Fix:** `CascadeAllocator` now accepts `low_conf_low` / `low_conf_high` params
-(default [0.35, 0.65]). If mid-tier arms agree (disagreement < threshold) but
-their average score falls inside this window, escalate to Claude anyway — uncertain
-agreement is treated the same as disagreement.
+**Proposed fix:** `CascadeAllocator` accepts `low_conf_low` / `low_conf_high` params
+(default [0.35, 0.65]). If mid-tier arms agree but their average falls inside this
+window, escalate to Claude anyway.
 
-**Tradeoff sweep (synthetic calibrated scores):**
+**Real-model sweep result (A100 40GB, JBB-Behaviors 200 prompts):**
 
-| Window | Precision | Recall | FPR | Avg cost | % reach Claude |
-|---|---|---|---|---|---|
-| disabled (original) | 0.901 | 1.000 | 0.110 | 35.2 | 16.5% |
-| [0.35, 0.65] (default) | 0.935 | 1.000 | 0.070 | 38.3 | 29.5% |
-| [0.25, 0.75] (wider) | 0.962 | 1.000 | 0.040 | 39.0 | 41.0% |
-| always-all (ref) | 0.830* | 0.930* | 0.190* | 49.0* | 100% |
+| Window | Precision | Recall | % reach Claude | Avg cost |
+|---|---|---|---|---|
+| disabled (original) | 0.748 | 0.950 | 21.5% | 31.12 |
+| [0.45, 0.55] | 0.742 | 0.950 | 21.5% | 31.12 |
+| [0.35, 0.65] | 0.754 | 0.950 | 21.5% | 31.12 |
+| [0.25, 0.75] | **0.760** | 0.950 | 21.5% | 31.12 |
+| [0.20, 0.80] | 0.748 | 0.950 | 21.5% | 31.12 |
 
-*Real model numbers — rest are synthetic calibrated.
+**Finding:** avg cost and Claude utilization are **identical across all window
+widths** — the low-confidence window never fires on real model scores. When
+ShieldGemma and WildGuard agree (disagreement < 0.35), their average is almost
+always clearly above 0.65 or clearly below 0.35. Real mid-tier arm score
+distributions are bimodal on JBB prompts: harmful inputs score ~0.80–0.95, benign
+inputs score ~0.05–0.25, with almost no mass in the uncertain middle.
 
-Precision improves monotonically as the window widens; cost grows proportionally
-to how many inputs now reach Claude. The sweet spot depends on the cost/precision
-tradeoff for the deployment context — [0.35, 0.65] is the default; override with
-`CascadeAllocator(..., low_conf_low=0.25, low_conf_high=0.75)` for more precision.
+**Implication:** the precision gap (0.748 vs always-all 0.823) comes from
+mid-tier arms agreeing at **high confidence** on benign prompts that look like
+jailbreaks — not from low-confidence agreement. A low-confidence window can't fix
+it. The real fix requires either a tighter mid-tier disagreement threshold
+(escalate more to Claude), or better mid-tier arms with lower individual FPR.
+The precision fluctuations in the table above (0.742–0.760) are noise — the window
+never triggers, so they reflect sampling variance only.
 
 ```bash
-python3 scripts/precision_fix_eval.py
+python3 scripts/precision_fix_eval.py          # real models (GPU)
+python3 scripts/precision_fix_eval.py --synthetic  # calibrated synthetic
 ```
 
 Output: `results/precision_fix_sweep.png`, `results/precision_fix_sweep.csv`.

@@ -53,9 +53,13 @@ $$r = \begin{cases} 0.5 + 0.5 \cdot (1 - \text{cost\_fraction}) & \text{if decis
 
 where cost_fraction = (arms called cost) / (always-all cost). The reward trades off recall correctness (wrong = 0) against compute efficiency (correct + cheap = full reward). EXP3 is chosen over UCB because jailbreak prompt distributions are non-stationary — an adversary can shift the distribution — and EXP3 provides regret guarantees against an adversarial reward sequence without assuming stationarity.
 
-### 2.4 Low-Confidence Escalation Fix
+### 2.4 Low-Confidence Escalation Fix (and Why It Doesn't Work on Real Models)
 
-A precision gap was diagnosed in Stage 2: when ShieldGemma and WildGuard agree on a false positive at low confidence (both score a safe prompt near 0.5), no arm corrects them — the cascade stops and Claude is never called. The fix adds a low-confidence window [0.35, 0.65]: mid-tier agreement inside this window triggers escalation to Claude the same as disagreement. This increases Claude utilization from 22% to ~30% and is the primary lever for improving precision at additional compute cost.
+A precision gap was diagnosed in Stage 2: when ShieldGemma and WildGuard agree on a false positive at low confidence (both score ~0.5), no arm corrects them. The proposed fix adds a low-confidence window [0.35, 0.65]: mid-tier agreement inside this window triggers escalation to Claude the same as disagreement.
+
+**Real-model result:** the window never fires. When ShieldGemma and WildGuard agree (disagreement < 0.35), their average is almost always above 0.65 or below 0.35 — score distributions are bimodal on JBB prompts. Claude utilization (21.5%) is identical across all window widths from [0.45, 0.55] to [0.20, 0.80].
+
+**Implication:** the precision gap is not from low-confidence agreement — it's from high-confidence agreement on false positives. Both arms simultaneously score benign adversarially-styled prompts at ~0.80–0.90. The fix requires a tighter disagreement threshold or lower individual FPR in the mid-tier arms, not a low-confidence window.
 
 ---
 
@@ -152,7 +156,7 @@ Given 200 labeled examples, EXP3 shifted weight toward escalating more readily f
 
 **EXP3 convergence on 200 examples.** The bandit has not converged — 200 examples is a short run for 6 arms. The threshold finding (0.60 dominant) is a tendency, not a stable equilibrium.
 
-**Precision fix not measured on real models.** The low-confidence escalation sweep (Section 2.4) uses synthetic calibrated scores. Real-model precision improvement would require re-running the JBB benchmark with the fix enabled.
+**Precision fix does not work on real models.** The low-confidence escalation window never fires on JBB with real models — mid-tier arm scores are bimodal, not uncertain. The precision gap requires a different mechanism (tighter disagreement threshold, or lower FPR mid-tier arms), not a low-confidence window. See Section 2.4.
 
 ---
 
