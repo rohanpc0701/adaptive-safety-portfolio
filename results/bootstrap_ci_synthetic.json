@@ -1,0 +1,50 @@
+[
+  {
+    "policy": "cascade",
+    "metric": "recall",
+    "point": 1.0,
+    "ci_lower": 1.0,
+    "ci_upper": 1.0,
+    "mode": "synthetic"
+  },
+  {
+    "policy": "cascade",
+    "metric": "precision",
+    "point": 0.8696,
+    "ci_lower": 0.8083,
+    "ci_upper": 0.9298,
+    "mode": "synthetic"
+  },
+  {
+    "policy": "cascade",
+    "metric": "fpr",
+    "point": 0.15,
+    "ci_lower": 0.0833,
+    "ci_upper": 0.2211,
+    "mode": "synthetic"
+  },
+  {
+    "policy": "always_all",
+    "metric": "recall",
+    "point": 1.0,
+    "ci_lower": 1.0,
+    "ci_upper": 1.0,
+    "mode": "synthetic"
+  },
+  {
+    "policy": "always_all",
+    "metric": "precision",
+    "point": 1.0,
+    "ci_lower": 1.0,
+    "ci_upper": 1.0,
+    "mode": "synthetic"
+  },
+  {
+    "policy": "always_all",
+    "metric": "fpr",
+    "point": 0.0,
+    "ci_lower": 0.0,
+    "ci_upper": 0.0,
+    "mode": "synthetic"
+  }
+]

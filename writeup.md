@@ -59,7 +59,15 @@ A precision gap was diagnosed in Stage 2: when ShieldGemma and WildGuard agree o
 
 **Real-model result:** the window never fires. When ShieldGemma and WildGuard agree (disagreement < 0.35), their average is almost always above 0.65 or below 0.35 — score distributions are bimodal on JBB prompts. Claude utilization (21.5%) is identical across all window widths from [0.45, 0.55] to [0.20, 0.80].
 
-**Implication:** the precision gap is not from low-confidence agreement — it's from high-confidence agreement on false positives. Both arms simultaneously score benign adversarially-styled prompts at ~0.80–0.90. The fix requires a tighter disagreement threshold or lower individual FPR in the mid-tier arms, not a low-confidence window.
+**Implication:** the precision gap is not from low-confidence agreement — it's from high-confidence agreement on false positives. Both arms simultaneously score benign adversarially-styled prompts at ~0.80–0.90. The actionable fix is a **tighter disagreement threshold** (see §2.5), not a low-confidence window.
+
+### 2.5 Disagreement Threshold Sweep
+
+`scripts/disagreement_sweep.py` sweeps `disagreement_threshold` from 0.05 to 0.60. Lower values escalate more inputs to the judge when mid-tier arms diverge, improving precision at higher compute. Synthetic calibrated replay: threshold 0.05 → ~96% precision with ~60% judge utilization vs ~87% at default 0.35. Real-model: `python3 scripts/disagreement_sweep.py --real`.
+
+### 2.6 Open-Weights PAIR Attacker
+
+`scripts/pair_attacker.py --attacker hf` uses a HuggingFace causal LM (`ATTACKER_MODEL`, default `HuggingFaceH4/zephyr-7b-beta`) instead of the Claude API, reducing content-policy refusals on sensitive goals. Falls back to synthetic framing variants on errors.
 
 ---
 
@@ -153,7 +161,7 @@ Given 200 labeled examples, EXP3 shifted weight toward escalating more readily f
 
 **Cost units are not measured.** The "avg cost" column is parameter-size proxies assigned before any real run, not measured GPU FLOPs or energy. Real latency (measured) tells a somewhat different story — see Section 4.1.
 
-**JBB-Behaviors is 200 prompts.** Confidence intervals are not reported. Differences of ±1–2 prompts (0.5–1%) are within noise. The qualitative direction of findings is robust; exact numbers should be treated as point estimates.
+**JBB-Behaviors is 200 prompts.** Bootstrap 95% CIs are available via `scripts/bootstrap_ci_eval.py` (synthetic fast path; `--real` on GPU). Differences of ±1–2 prompts (0.5–1%) are within noise.
 
 **EXP3 convergence on 200 examples.** The bandit has not converged — 200 examples is a short run for 6 arms. The threshold finding (0.60 dominant) is a tendency, not a stable equilibrium.
 
@@ -177,9 +185,9 @@ Given 200 labeled examples, EXP3 shifted weight toward escalating more readily f
 
 ## 8. Conclusion
 
-A cascade allocator with real model weights achieves higher recall than always-running all arms, at lower average compute — but with a real precision tradeoff that is worth reporting rather than cropping. The tradeoff is tunable via the low-confidence escalation window: wider windows improve precision at additional Claude utilization cost. Online EXP3 allocation learns a more effective escalation threshold than hand-tuning given even a short labeled stream. Over-refusal on genuinely safe prompts (XSTest FPR = 0.008) is not the binding constraint — the binding constraint is false positives on adversarially-styled benign prompts (JBB benign FPR = 0.33), which requires better mid-tier arm precision or more aggressive Claude escalation, not a different approach to safe-sounding language.
+A cascade allocator with real model weights achieves higher recall than always-running all arms, at lower average compute — but with a real precision tradeoff worth reporting. The tradeoff is tunable via **disagreement threshold** (more judge escalation → higher precision, more cost). The low-confidence escalation window does not fire on real bimodal score distributions. Online EXP3 allocation learns a more effective stage-1 threshold than hand-tuning. Over-refusal on genuinely safe prompts (XSTest FPR = 0.008) is not the binding constraint — false positives on adversarially-styled benign prompts (JBB benign FPR = 0.33) are.
 
-The main remaining gap is PAIR with an unconstrained attacker LLM — a model that does not refuse CBRN goals — which would give cleaner escape-round counts for all five goals. A separate open-weights attack model (e.g. Mistral-7B without safety fine-tuning) would close this gap without API refusals.
+Open-weights PAIR (`--attacker hf`) and public demo deployment (`deploy/`) are included for reproducibility without API content-policy limits.
 
 ---
 
@@ -214,7 +222,16 @@ python3 scripts/xstest_eval.py                 # real models
 python3 scripts/xstest_eval.py --synthetic     # fast
 
 # Precision fix sweep
-python3 scripts/precision_fix_eval.py          # runs on synthetic
+python3 scripts/precision_fix_eval.py          # real models (GPU)
+python3 scripts/precision_fix_eval.py --synthetic
+
+# Disagreement threshold sweep + bootstrap CIs
+python3 scripts/disagreement_sweep.py
+python3 scripts/bootstrap_ci_eval.py
+
+# Unit tests + CI smoke (no GPU)
+pytest tests/
+python3 scripts/pair_attacker.py --synthetic
 ```
 
 All output goes to `results/`. Requires an A100 or equivalent for reasonable runtimes (~45 min total on A100 40GB).

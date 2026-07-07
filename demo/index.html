@@ -329,7 +329,7 @@ textarea:focus-visible { outline: none; border-color: var(--green); box-shadow: 
     <span class="topbar-sub">cascade allocator · four detector arms</span>
   </div>
   <div class="topbar-right">
-    <input class="backend-input" id="backendInput" value="http://localhost:8765" aria-label="Backend URL" spellcheck="false">
+    <input class="backend-input" id="backendInput" value="" aria-label="Backend URL" spellcheck="false">
     <div class="health-pill" id="healthPill">
       <div class="health-dot"></div>
       <span id="healthLabel">Connecting…</span>
@@ -500,7 +500,10 @@ textarea:focus-visible { outline: none; border-color: var(--green); box-shadow: 
 
 <script>
 // ─── Config ───────────────────────────────────────────────────────────────────
-let BASE = 'http://localhost:8765';
+const DEFAULT_LOCAL = 'http://localhost:8765';
+let BASE = (window.location.protocol.startsWith('http') && window.location.port)
+  ? `${window.location.protocol}//${window.location.host}`
+  : DEFAULT_LOCAL;
 
 const backendInput = document.getElementById('backendInput');
 backendInput.addEventListener('change', () => {
@@ -905,8 +908,10 @@ function escHtml(s) {
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
+backendInput.value = BASE;
 renderSelector();
 renderDetail();
+checkHealth();
 </script>
 </body>
 </html>

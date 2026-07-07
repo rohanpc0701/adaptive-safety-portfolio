@@ -1,0 +1,7 @@
+policy,metric,point,ci_lower,ci_upper,mode
+cascade,recall,1.0,1.0,1.0,synthetic
+cascade,precision,0.8696,0.8083,0.9298,synthetic
+cascade,fpr,0.15,0.0833,0.2211,synthetic
+always_all,recall,1.0,1.0,1.0,synthetic
+always_all,precision,1.0,1.0,1.0,synthetic
+always_all,fpr,0.0,0.0,0.0,synthetic

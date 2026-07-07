@@ -1,8 +1,19 @@
+# Core ML (pin transformers — 5.x breaks WildGuard tokenizer)
 torch>=2.1.0
-transformers>=4.44.0
-accelerate>=0.33.0
+transformers==4.46.3
+accelerate>=0.33.0,<2
 anthropic>=0.40.0
 datasets>=2.20.0
 pandas>=2.2.0
 matplotlib>=3.9.0
-numpy>=1.26.0
+numpy>=1.26.0,<3
+
+# Demo / API
+fastapi>=0.115.0
+uvicorn>=0.32.0
+sentencepiece>=0.2.0
+tiktoken>=0.8.0
+protobuf>=5.0.0
+
+# Dev / CI
+pytest>=8.0.0
