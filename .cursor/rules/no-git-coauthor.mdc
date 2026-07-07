@@ -1,0 +1,10 @@
+---
+description: Never add AI co-author trailers to git commits
+alwaysApply: true
+---
+
+# Git commits
+
+- Do **not** add `Co-authored-by`, `Co-Authored-By`, or any AI/Cursor/Claude contributor trailers to commit messages.
+- All commits should list only **Rohan Chavan** as author.
+- Use `git commit --no-verify` only when a hook incorrectly injects co-author lines and the user has asked to remove them.
