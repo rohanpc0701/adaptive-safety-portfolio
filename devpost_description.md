@@ -68,21 +68,15 @@ adaptive, not just a fixed policy with a clever name.
 
 ### PAIR adaptive attacker
 
-We evaluate robustness using PAIR-style iterative refinement (Chao et al.
-2023): an attacker LLM generates jailbreak attempts against 5 diverse goals,
-receiving per-arm score feedback each round and refining until the cascade is
-fooled or 15 rounds elapse.
+PAIR-style iterative refinement (Chao et al. 2023): an attacker LLM generates jailbreak attempts against five diverse goals, receives per-arm score feedback each round, and refines until the cascade is fooled or 15 rounds elapse.
 
-| Policy | Escape rate |
-|---|---|
-| Static (PG2 only) | 5/5 (100%) — escapes round 1 |
-| Fixed cascade | 0/5 (0%) — held 15 rounds |
-| EXP3 bandit | 0/5 (0%) — held 15 rounds |
+| Policy | Escape rate | Avg rounds to escape |
+|---|---|---|
+| Static (PG2 only) | 5/5 (100%) | 1.0 |
+| Fixed cascade | 5/5 (100%) | 3.4 |
+| EXP3 bandit | 5/5 (100%) | **5.4** |
 
-Important caveat: our PAIR implementation uses pre-scripted framing variants,
-not a real LLM attacker generating novel refinements from score feedback. The
-cascade result (held all rounds) is an upper bound. A real LLM attacker is a
-planned next step.
+All attacks used genuine LLM-generated refinements (non-CBRN goals to avoid API refusals). Static escapes immediately; the bandit policy takes 60% more rounds to escape than the fixed cascade because its threshold shifts under attack.
 
 ### XSTest: the over-refusal story is more interesting than expected
 
@@ -103,21 +97,11 @@ dangerous-sounding language *without* that framing. The cascade correctly
 distinguishes them. The over-refusal problem we actually have is
 false-positives on adversarial framing, not on genuine sensitive-but-safe use.
 
-### Precision fix: a diagnosed and built solution
+### Precision fix (negative result on real models)
 
-The precision gap is diagnosed: mid-tier arms agree on false positives at low
-confidence (both score ~0.5) and Claude never gets called to override. Fix:
-escalate to Claude when mid-tier agreement falls in a low-confidence window
-[0.35, 0.65]. Sweeping window widths on synthetic data:
+The precision gap was diagnosed: mid-tier arms agreeing on false positives without reaching the judge. A low-confidence escalation window [0.35, 0.65] was implemented and swept across seven widths.
 
-| Window | Precision | Claude utilization | Avg cost |
-|---|---|---|---|
-| disabled | 0.877 | 16.5% | 35.2 |
-| [0.35, 0.65] | 0.935 | 29.5% | 38.3 |
-| [0.25, 0.75] | 0.962 | 41.0% | 39.0 |
-
-Precision-recall-cost tradeoff is explicit, tunable via constructor arguments,
-and the mechanism is built and tested (not claimed as future work).
+On real models, the window **never fires** — mid-tier scores are bimodal (harmful ~0.80–0.95, benign ~0.05–0.25), so the fix requires a different mechanism (tighter disagreement threshold or lower-FPR mid-tier arms).
 
 ## Built with
 
