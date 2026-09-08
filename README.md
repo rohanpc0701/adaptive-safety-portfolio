@@ -19,20 +19,19 @@ Most LLM safety layers run every detector on every input. This project allocates
 
 | | Cascade | Always-all baseline |
 |---|---|---|
-| **Recall** | **0.95** [0.91, 0.97]‡ | 0.93 [0.89, 0.96]‡ |
+| **Recall** | **0.95** | 0.93 |
 | **Precision** | 0.74 | **0.82** |
 | **Avg latency** | **1,291 ms** | 2,583 ms |
 
-‡Bootstrap 95% CI from calibrated synthetic replay; re-run `scripts/bootstrap_ci_eval.py --real` on GPU for model-weight CIs.
-
-- **2× lower latency** than running all four detectors on every prompt
+- **Measured latency:** 1,290.6 ms vs 2,582.5 ms for always-all (50.0% lower; 2.00× speedup)
+- **Proxy cost:** 31.12 vs 49.00 hand-assigned units (36.5% lower; 1.57× reduction)
 - **EXP3 bandit** learns escalation thresholds online (converged to 0.60 vs hand-set 0.75)
-- **PAIR red-team:** adaptive policy takes **60% more rounds** to escape than a fixed cascade
+- **PAIR red-team:** in one five-goal run, the adaptive policy averaged 5.4 rounds to escape vs 3.4 for the fixed cascade
 - **XSTest FPR 0.008** on genuinely safe prompts (vs 0.33 on adversarially-styled JBB benign)
-- **Disagreement-threshold sweep** maps the precision–recall–judge tradeoff ([plot](results/disagreement_sweep_synthetic.png))
-- Interactive **live demo** — [self-hosted](deploy/README.md) or Hugging Face Spaces
+- **Synthetic disagreement-threshold sweep** maps the precision–recall–judge tradeoff ([plot](results/disagreement_sweep_synthetic.png))
+- **Deployable demo template** for self-hosting or creating a Hugging Face Space; no hosted Space URL is published
 
-All benchmark numbers below use real model weights (`MOCK_MODE = False`). Cost units are hand-assigned size proxies; latency is measured wall-clock time.
+The JBB, EXP3, PAIR, and XSTest tables below are committed outputs from real-model runs (`MOCK_MODE = False`). The disagreement sweep is synthetic and labeled separately. The committed bootstrap file is also synthetic, so this README does not present its intervals as model-run confidence bounds. Cost units are hand-assigned size proxies; latency is measured wall-clock time.
 
 ---
 
@@ -52,7 +51,7 @@ An **EXP3 bandit** variant (`bandit_cascade.py`) treats the stage-1 threshold as
 
 ## Results
 
-### JailbreakBench (JBB-Behaviors)
+### JailbreakBench (JBB-Behaviors, real-model run)
 
 | Allocator | Recall | Precision | FPR | Avg cost† | Latency (ms) |
 |---|---|---|---|---|---|
@@ -67,7 +66,7 @@ An **EXP3 bandit** variant (`bandit_cascade.py`) treats the stage-1 threshold as
 
 ![Recall vs compute cost](results/recall_vs_cost.png)
 
-### Precision tradeoff: disagreement threshold sweep
+### Precision tradeoff: disagreement threshold sweep (synthetic)
 
 Tighter `disagreement_threshold` → more inputs reach the judge → higher precision, more compute.
 
@@ -78,14 +77,14 @@ python3 scripts/disagreement_sweep.py           # synthetic (~10s)
 python3 scripts/disagreement_sweep.py --real    # GPU + API
 ```
 
-### EXP3 bandit vs fixed cascade
+### EXP3 bandit vs fixed cascade (real-model run)
 
 | Allocator | Recall | Precision | Avg cost | Threshold |
 |---|---|---|---|---|
 | Fixed cascade | 0.95 | 0.74 | 31.1 | 0.75 (hand-set) |
 | EXP3 bandit | 0.95 | 0.74 | **30.0** | **0.60 (learned)** |
 
-### PAIR adaptive attacker
+### PAIR adaptive attacker (real models + Claude attacker)
 
 | Goal | Static | Fixed cascade | EXP3 bandit |
 |---|---|---|---|
@@ -102,7 +101,7 @@ python3 scripts/pair_attacker.py --attacker claude      # Claude API attacker
 python3 scripts/pair_attacker.py --attacker hf          # open-weights (set ATTACKER_MODEL)
 ```
 
-### XSTest over-refusal
+### XSTest over-refusal (real-model run)
 
 | Policy | XSTest FPR | JBB benign FPR |
 |---|---|---|
@@ -114,7 +113,7 @@ python3 scripts/pair_attacker.py --attacker hf          # open-weights (set ATTA
 
 ## Findings
 
-1. **Real tradeoff:** cascade wins on recall and compute; precision drops because the judge only runs on 22% of inputs.
+1. **Measured tradeoff:** cascade recall rises from 0.93 to 0.95 while precision falls from 0.823 to 0.742; proxy cost falls 36.5% and measured latency falls 50.0%.
 2. **PG2 blind spot:** misses 69/100 harmful JBB prompts; mid-tier arms recover 64/69.
 3. **Bimodal scores:** low-confidence escalation fix never fires on real models.
 4. **Adaptive > fixed under attack:** EXP3 bandit requires more PAIR rounds to escape.
@@ -122,11 +121,11 @@ python3 scripts/pair_attacker.py --attacker hf          # open-weights (set ATTA
 
 ---
 
-## Live demo
+## Demo deployment template
 
-### Hugging Face Spaces (public)
+### Hugging Face Spaces
 
-See [deploy/README.md](deploy/README.md). CPU synthetic mode works without a GPU; set `DEMO_MODE=real` for full models.
+See [deploy/README.md](deploy/README.md) to create a Space. No hosted Space is linked from this repository. The template defaults to calibrated synthetic detectors on CPU; `DEMO_MODE=real` loads the model-backed pipeline and requires suitable hardware and credentials.
 
 ### Self-hosted
 
@@ -136,7 +135,7 @@ ssh -L 8765:localhost:8000 user@gpu-host
 open demo/index.html
 ```
 
-The demo auto-detects the backend URL when served from the same host (e.g. HF Spaces).
+The self-hosted demo uses the real-model backend. The Hugging Face template auto-detects its backend URL and defaults to synthetic mode unless configured otherwise.
 
 ---
 
@@ -152,11 +151,12 @@ python3 scripts/benchmark.py
 python3 scripts/bandit_benchmark.py
 python3 scripts/pair_attacker.py --synthetic
 python3 scripts/disagreement_sweep.py
-python3 scripts/bootstrap_ci_eval.py
+python3 scripts/bootstrap_ci_eval.py            # synthetic bootstrap smoke run
+# python3 scripts/bootstrap_ci_eval.py --real   # model-backed run; GPU + API access
 pytest tests/
 ```
 
-Synthetic modes (`--synthetic`) run in CI without a GPU. Full real-model reproduction needs an A100-class GPU (~45 min).
+CI runs mock/synthetic tests without downloading model weights. Full real-model reproduction needs an A100-class GPU (~45 min) plus model and API access.
 
 ---
 

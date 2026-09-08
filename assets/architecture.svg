@@ -1,64 +1,60 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 420" font-family="ui-monospace, 'SF Mono', Menlo, monospace">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 390" role="img" aria-labelledby="title desc">
+  <title id="title">Adaptive safety cascade</title>
+  <desc id="desc">A prompt passes through Prompt Guard, escalates to ShieldGemma and WildGuard when uncertain, and reaches an LLM judge only when those detectors disagree.</desc>
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#0b1210"/>
-      <stop offset="100%" stop-color="#05080a"/>
-    </linearGradient>
-    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-      <path d="M0,0 L6,3 L0,6 Z" fill="#4fd68c"/>
+    <style>
+      .title { fill: #f8fafc; font: 700 22px system-ui, sans-serif; }
+      .label { fill: #f8fafc; font: 600 15px system-ui, sans-serif; }
+      .detail { fill: #cbd5e1; font: 13px system-ui, sans-serif; }
+      .edge { fill: none; stroke: #94a3b8; stroke-width: 2.5; marker-end: url(#arrow); }
+      .box { fill: #172033; stroke: #64748b; stroke-width: 2; rx: 12; }
+      .primary { stroke: #34d399; }
+      .middle { stroke: #fbbf24; }
+      .judge { stroke: #60a5fa; }
+      .stop { stroke: #f87171; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
     </marker>
   </defs>
-  <rect width="820" height="420" fill="url(#bg)" rx="12"/>
-  <text x="410" y="36" fill="#e4ece6" font-size="18" font-weight="700" text-anchor="middle">Adaptive Safety Cascade</text>
-  <text x="410" y="58" fill="#93a39b" font-size="11" text-anchor="middle">cheap check first · escalate only when uncertain</text>
 
-  <!-- Prompt -->
-  <rect x="340" y="78" width="140" height="36" rx="6" fill="#0e1714" stroke="#1a2620"/>
-  <text x="410" y="101" fill="#e4ece6" font-size="12" text-anchor="middle">User prompt</text>
+  <rect width="900" height="390" fill="#0f172a" rx="16"/>
+  <text class="title" x="450" y="38" text-anchor="middle">Adaptive Safety Cascade</text>
+  <text class="detail" x="450" y="61" text-anchor="middle">Run the cheapest detector first; escalate only when its decision needs more evidence.</text>
 
-  <!-- Arrow down -->
-  <line x1="410" y1="114" x2="410" y2="138" stroke="#4fd68c" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect class="box" x="40" y="128" width="120" height="70"/>
+  <text class="label" x="100" y="158" text-anchor="middle">Prompt</text>
+  <text class="detail" x="100" y="180" text-anchor="middle">input</text>
 
-  <!-- Stage 1 -->
-  <rect x="260" y="140" width="300" height="48" rx="8" fill="#0e1714" stroke="#4fd68c" stroke-width="1.5"/>
-  <text x="410" y="162" fill="#4fd68c" font-size="11" font-weight="700" text-anchor="middle">STAGE 1 · Prompt Guard 2 (86M)</text>
-  <text x="410" y="178" fill="#93a39b" font-size="10" text-anchor="middle">runs on every input · ~94ms</text>
+  <rect class="box primary" x="220" y="110" width="190" height="106"/>
+  <text class="label" x="315" y="148" text-anchor="middle">Prompt Guard 2</text>
+  <text class="detail" x="315" y="171" text-anchor="middle">86M Â· every input</text>
+  <text class="detail" x="315" y="193" text-anchor="middle">~94 ms in benchmark</text>
 
-  <!-- Branch confident harmful -->
-  <line x1="320" y1="188" x2="160" y2="220" stroke="#f0685c" stroke-width="1.5"/>
-  <text x="130" y="232" fill="#f0685c" font-size="10" text-anchor="middle">confident</text>
-  <text x="130" y="246" fill="#f0685c" font-size="10" text-anchor="middle">harmful</text>
-  <rect x="70" y="252" width="120" height="32" rx="6" fill="rgba(240,104,92,0.15)" stroke="#f0685c"/>
-  <text x="130" y="273" fill="#f0685c" font-size="11" font-weight="700" text-anchor="middle">BLOCK · STOP</text>
+  <rect class="box middle" x="475" y="84" width="180" height="74"/>
+  <text class="label" x="565" y="115" text-anchor="middle">ShieldGemma 2B</text>
+  <text class="detail" x="565" y="137" text-anchor="middle">mid-tier detector</text>
 
-  <!-- Branch uncertain -->
-  <line x1="410" y1="188" x2="410" y2="218" stroke="#f0c25a" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="450" y="208" fill="#f0c25a" font-size="10">uncertain</text>
+  <rect class="box middle" x="475" y="190" width="180" height="74"/>
+  <text class="label" x="565" y="221" text-anchor="middle">WildGuard 7B</text>
+  <text class="detail" x="565" y="243" text-anchor="middle">mid-tier detector</text>
 
-  <!-- Stage 2 -->
-  <rect x="180" y="222" width="200" height="48" rx="8" fill="#0e1714" stroke="#f0c25a"/>
-  <text x="280" y="244" fill="#f0c25a" font-size="10" font-weight="700" text-anchor="middle">ShieldGemma 2B</text>
-  <text x="280" y="258" fill="#93a39b" font-size="9" text-anchor="middle">mid-tier</text>
+  <rect class="box judge" x="720" y="128" width="140" height="70"/>
+  <text class="label" x="790" y="158" text-anchor="middle">LLM judge</text>
+  <text class="detail" x="790" y="180" text-anchor="middle">disagreement only</text>
 
-  <rect x="440" y="222" width="200" height="48" rx="8" fill="#0e1714" stroke="#f0c25a"/>
-  <text x="540" y="244" fill="#f0c25a" font-size="10" font-weight="700" text-anchor="middle">WildGuard 7B</text>
-  <text x="540" y="258" fill="#93a39b" font-size="9" text-anchor="middle">mid-tier</text>
+  <rect class="box stop" x="220" y="296" width="190" height="58"/>
+  <text class="label" x="315" y="331" text-anchor="middle">Return decision</text>
 
-  <!-- Agree stop -->
-  <line x1="280" y1="270" x2="120" y2="310" stroke="#4fd68c" stroke-width="1.5"/>
-  <rect x="40" y="314" width="160" height="32" rx="6" fill="rgba(79,214,140,0.12)" stroke="#4fd68c"/>
-  <text x="120" y="335" fill="#4fd68c" font-size="10" text-anchor="middle">agree ’ trust avg · STOP</text>
+  <path class="edge" d="M160 163 H220"/>
+  <path class="edge" d="M410 142 H475"/>
+  <path class="edge" d="M410 184 H475"/>
+  <path class="edge" d="M655 121 C690 121 687 150 720 150"/>
+  <path class="edge" d="M655 227 C690 227 687 177 720 177"/>
+  <path class="edge" d="M315 216 V296"/>
 
-  <!-- Disagree -->
-  <line x1="540" y1="270" x2="680" y2="300" stroke="#f0c25a" stroke-width="1.5"/>
-  <text x="640" y="292" fill="#f0c25a" font-size="10">disagree</text>
-
-  <!-- Stage 3 -->
-  <rect x="600" y="306" width="180" height="48" rx="8" fill="#0e1714" stroke="#93a39b"/>
-  <text x="690" y="328" fill="#e4ece6" font-size="10" font-weight="700" text-anchor="middle">STAGE 3 · LLM Judge</text>
-  <text x="690" y="342" fill="#93a39b" font-size="9" text-anchor="middle">tiebreaker · 22% of inputs</text>
-
-  <!-- Stats bar -->
-  <rect x="40" y="372" width="740" height="32" rx="6" fill="#0e1714" stroke="#1a2620"/>
-  <text x="410" y="393" fill="#93a39b" font-size="11" text-anchor="middle">95% recall · 2× lower latency vs always-all · 18% / 60% / 22% escalation split</text>
+  <text class="detail" x="443" y="111" text-anchor="middle">uncertain</text>
+  <text class="detail" x="687" y="112" text-anchor="middle">disagree</text>
+  <text class="detail" x="327" y="261">confident</text>
+  <text class="detail" x="450" y="375" text-anchor="middle">Committed run: 18% stop after stage 1 Â· 60% after stage 2 Â· 22% reach the judge</text>
 </svg>

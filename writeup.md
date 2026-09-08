@@ -187,7 +187,7 @@ Given 200 labeled examples, EXP3 shifted weight toward escalating more readily f
 
 A cascade allocator with real model weights achieves higher recall than always-running all arms, at lower average compute — but with a real precision tradeoff worth reporting. The tradeoff is tunable via **disagreement threshold** (more judge escalation → higher precision, more cost). The low-confidence escalation window does not fire on real bimodal score distributions. Online EXP3 allocation learns a more effective stage-1 threshold than hand-tuning. Over-refusal on genuinely safe prompts (XSTest FPR = 0.008) is not the binding constraint — false positives on adversarially-styled benign prompts (JBB benign FPR = 0.33) are.
 
-Open-weights PAIR (`--attacker hf`) and public demo deployment (`deploy/`) are included for reproducibility without API content-policy limits.
+Open-weights PAIR (`--attacker hf`) and a demo deployment template (`deploy/`) are included for reproducibility without API content-policy limits.
 
 ---
 

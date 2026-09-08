@@ -1,6 +1,8 @@
 # Deployment
 
-## Hugging Face Spaces (recommended for public demo)
+## Hugging Face Spaces deployment template
+
+This repository does not publish a hosted Space URL. Use these files to create one:
 
 1. Create a new **Docker** Space at [huggingface.co/new-space](https://huggingface.co/new-space).
 2. Clone this repo (or copy `deploy/huggingface/` contents into the Space repo).
