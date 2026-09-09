@@ -17,7 +17,7 @@ Most systems run every detector on every input. I built an adaptive cascade that
 
 Open source, fully reproducible, interactive demo included.
 
-🔗 https://github.com/rohanpc0701/adaptive-safety-portfolio
+🔗 https://github.com/RohanChavan0701/adaptive-safety-portfolio
 
 #MachineLearning #AISafety #LLM #MLOps #Python
 

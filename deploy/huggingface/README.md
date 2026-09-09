@@ -13,4 +13,4 @@ license: mit
 
 Interactive cascade safety classifier demo. Set `DEMO_MODE=synthetic` (default) for CPU-only calibrated scores, or `DEMO_MODE=real` with GPU + API keys for full models.
 
-See [deploy/README.md](https://github.com/rohanpc0701/adaptive-safety-portfolio/blob/main/deploy/README.md) for deployment instructions.
+See [deploy/README.md](https://github.com/RohanChavan0701/adaptive-safety-portfolio/blob/main/deploy/README.md) for deployment instructions.
