@@ -2,10 +2,10 @@
 
 **Inference-time compute allocation for LLM jailbreak detection**
 
-[![CI](https://github.com/RohanChavan0701/adaptive-safety-portfolio/actions/workflows/ci.yml/badge.svg)](https://github.com/RohanChavan0701/adaptive-safety-portfolio/actions/workflows/ci.yml)
+[![CI](https://github.com/RohanChavan0701/adaptive-safety/actions/workflows/ci.yml/badge.svg)](https://github.com/RohanChavan0701/adaptive-safety/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-[Technical write-up](writeup.md) · [Docs index](docs/README.md) · [Deploy demo](deploy/README.md) · [GitHub](https://github.com/RohanChavan0701/adaptive-safety-portfolio)
+[Technical write-up](writeup.md) · [Docs index](docs/README.md) · [Deploy demo](deploy/README.md) · [GitHub](https://github.com/RohanChavan0701/adaptive-safety)
 
 **Rohan Chavan** · Inference-Time Compute Hackathon 2026
 

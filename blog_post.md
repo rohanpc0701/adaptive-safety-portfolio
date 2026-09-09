@@ -143,7 +143,7 @@ Three things I didn't expect going in:
 
 ## Code and Results
 
-Everything is on GitHub: [github.com/RohanChavan0701/adaptive-safety-portfolio](https://github.com/RohanChavan0701/adaptive-safety-portfolio)
+Everything is on GitHub: [github.com/RohanChavan0701/adaptive-safety](https://github.com/RohanChavan0701/adaptive-safety)
 
 All five evaluations run against real model weights. `MOCK_MODE = False`. Every number in this post is measured. The cost column in the tables is an exception — those are hand-assigned parameter-size proxies, not measured FLOPs, and I've labeled them accordingly.
 

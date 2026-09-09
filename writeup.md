@@ -1,6 +1,6 @@
 # Adaptive Safety Portfolio: Inference-Time Compute Allocation for LLM Jailbreak Detection
 
-**Rohan Chavan** | [github.com/RohanChavan0701/adaptive-safety-portfolio](https://github.com/RohanChavan0701/adaptive-safety-portfolio)
+**Rohan Chavan** | [github.com/RohanChavan0701/adaptive-safety](https://github.com/RohanChavan0701/adaptive-safety)
 
 ---
 
